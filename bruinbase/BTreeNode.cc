@@ -1,4 +1,5 @@
 #include "BTreeNode.h"
+#include <stdio.h>
 
 using namespace std;
 
@@ -86,6 +87,8 @@ PageId BTLeafNode::getNextNodePtr()
 RC BTLeafNode::setNextNodePtr(PageId pid)
 { return 0; }
 
+/* ------------------------------------------------------------------- */
+
 /*
  * Read the content of the node from the page pid in the PageFile pf.
  * @param pid[IN] the PageId to read
@@ -109,7 +112,10 @@ RC BTNonLeafNode::write(PageId pid, PageFile& pf)
  * @return the number of keys in the node
  */
 int BTNonLeafNode::getKeyCount()
-{ return 0; }
+{
+	// How to keep track of how full a node is?
+	return 0;
+}
 
 
 /*
@@ -152,4 +158,30 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
-{ return 0; }
+{
+	memset(this->buffer, 0, PageFile::PAGE_SIZE);
+	
+	// memcpy?
+	this->buffer[0] = pid1;
+	this->buffer[sizeof(PageId)] = key;
+	this->buffer[sizeof(PageId) + sizeof(int)] = pid2;
+
+	return 0; 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
