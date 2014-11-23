@@ -13,11 +13,6 @@
 #include "RecordFile.h"
 #include "PageFile.h"
 
-#define PAGE_ID_SIZE sizeof(PageId)
-#define RECORD_ID_SIZE sizeof(RecordId)
-#define KEY_SIZE sizeof(int)
-#define MAX_LEAF_KEY_COUNT 70
-
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
  *
@@ -119,6 +114,8 @@ class BTLeafNode {
     * that contains the node.
     */
     char buffer[PageFile::PAGE_SIZE];
+    const static int RECORD_ID_SIZE = sizeof(RecordId);
+    const static int MAX_LEAF_KEY_COUNT = 70;
 }; 
 
 
@@ -191,12 +188,17 @@ class BTNonLeafNode {
     */
     RC write(PageId pid, PageFile& pf);
 
+    const static int KEY_SIZE = sizeof(int);
+    const static int PAGE_ID_SIZE = sizeof(PageId);
+
   private:
    /**
     * The main memory buffer for loading the content of the disk page 
     * that contains the node.
     */
     char buffer[PageFile::PAGE_SIZE];
+    const static int MAX_NONLEAF_KEY_COUNT = 70;
+
 }; 
 
 #endif /* BTNODE_H */
