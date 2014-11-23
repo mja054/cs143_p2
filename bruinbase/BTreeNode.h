@@ -13,9 +13,21 @@
 #include "RecordFile.h"
 #include "PageFile.h"
 
+
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
+ *
+ *******************************************************************
+ * BTLeafNode page format                                          *
+ * ----------------------------------------------------------      *
+ * |   key   |   rid   |   key   |   rid   | ... | nextPage |      *
+ * ----------------------------------------------------------      *
+ * |    4    |    8    |    4    |    8    | ... |    4     |      *
+ * ----------------------------------------------------------      *
+ *******************************************************************
+ *
  */
+
 class BTLeafNode {
   public:
    /**
@@ -96,7 +108,8 @@ class BTLeafNode {
     */
     RC write(PageId pid, PageFile& pf);
 
-  private:
+ private:
+    RC _insert(char *buffer, int count, int key, const RecordId& rid);
    /**
     * The main memory buffer for loading the content of the disk page 
     * that contains the node.

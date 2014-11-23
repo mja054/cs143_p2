@@ -3,6 +3,7 @@
 
 using namespace std;
 
+
 /*
  * Read the content of the node from the page pid in the PageFile pf.
  * @param pid[IN] the PageId to read
@@ -10,7 +11,9 @@ using namespace std;
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+{
+	return pf.read(pid, this->buffer);
+}
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -19,14 +22,46 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+{
+	return pf.write(pid, this->buffer);
+}
 
 /*
  * Return the number of keys stored in the node.
  * @return the number of keys in the node
  */
 int BTLeafNode::getKeyCount()
-{ return 0; }
+{
+	int count = 0;
+	char *tbuffer = this->buffer;
+
+	/*
+	 * Logic: We assume that the page is initialized to zero
+	 * and key value will never be 0.
+	 */
+	while (*(int *) tbuffer && (count < 70)) {
+		count++;
+		tbuffer += (RECORD_ID_SIZE + KEY_SIZE);
+	}
+
+	return count;
+}
+
+RC BTLeafNode::_insert(char *buffer, int count, int key, const RecordId& rid)
+{
+	int i = 0;
+
+	while (count && (key < *(int *) buffer)) {
+		memcpy(buffer + (RECORD_ID_SIZE + KEY_SIZE), buffer,
+		       RECORD_ID_SIZE + KEY_SIZE);
+		buffer -= (RECORD_ID_SIZE + KEY_SIZE);
+		count--;
+	}
+
+	memcpy(buffer, &key, KEY_SIZE);
+	memcpy(buffer + KEY_SIZE, &rid, RECORD_ID_SIZE);
+	return 0;
+}
 
 /*
  * Insert a (key, rid) pair to the node.
@@ -35,7 +70,20 @@ int BTLeafNode::getKeyCount()
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
-{ return 0; }
+{
+	int count = getKeyCount();
+	char *tbuffer = this->buffer;
+
+	if (count == MAX_LEAF_KEY_COUNT) {
+		return RC_NODE_FULL;
+	} else if (count == 0) {
+		memcpy(tbuffer, &key, KEY_SIZE);
+		memcpy(tbuffer + KEY_SIZE, &rid, RECORD_ID_SIZE);
+		return 0;
+	}
+	return _insert(tbuffer + (KEY_SIZE + RECORD_ID_SIZE) * (count - 1),
+		       count, key, rid);
+}
 
 /*
  * Insert the (key, rid) pair to the node

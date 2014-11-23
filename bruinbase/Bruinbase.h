@@ -10,6 +10,11 @@
 #ifndef BRUINBASE_H
 #define BRUINBASE_H
 
+#define PAGE_ID_SIZE sizeof(PageId)
+#define RECORD_ID_SIZE sizeof(RecordId)
+#define KEY_SIZE sizeof(int)
+#define MAX_LEAF_KEY_COUNT 70
+
 typedef int RC;
 
 const int RC_FILE_OPEN_FAILED    = -1001;
