@@ -113,8 +113,35 @@ RC BTNonLeafNode::write(PageId pid, PageFile& pf)
  */
 int BTNonLeafNode::getKeyCount()
 {
-	// How to keep track of how full a node is?
-	return 0;
+	int ind = 0;
+	int numKeys = 0;
+
+	int tmpKey = -1;
+	PageId tmpPid = 0;
+
+	// assumes buffer has been initialized to 0
+	while(tmpKey != 0) {
+		// Parse the pid first and increment the index
+		memcpy(&tmpPid, this->buffer + ind, sizeof(PageId));
+		ind += sizeof(PageId);
+
+		// Parse the key next and increment the index
+		memcpy(&tmpKey, this->buffer + ind, sizeof(int));
+		ind += sizeof(int);
+
+		// Check to see if key value is 0 or if we have run out of keys
+		if (tmpKey == 0) {
+			memcpy(&tmpPid, this->buffer + ind, sizeof(PageId));
+			// If next pid is valid (aka not 0), continue parsing
+			if (tmpPid != 0) {
+				numKeys++;
+				continue;
+			}
+		}
+		else
+			numKeys++;
+	}
+	return numKeys;
 }
 
 
@@ -159,12 +186,13 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
  */
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 {
+	// initialize the buffer to 0's
 	memset(this->buffer, 0, PageFile::PAGE_SIZE);
-	
-	// memcpy?
-	this->buffer[0] = pid1;
-	this->buffer[sizeof(PageId)] = key;
-	this->buffer[sizeof(PageId) + sizeof(int)] = pid2;
+
+	// copy the inputs into the buffer
+	memcpy(this->buffer, &pid1, sizeof(PageId));
+	memcpy(this->buffer + sizeof(PageId), &key, sizeof(int));
+	memcpy(this->buffer + sizeof(PageId) + sizeof(int), &pid2, sizeof(PageId));
 
 	return 0; 
 }
