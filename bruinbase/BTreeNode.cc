@@ -108,7 +108,26 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::locate(int searchKey, int& eid)
-{ return 0; }
+{
+	char *tbuffer = this->buffer;
+	int count = getKeyCount();
+	int entry = 0;
+
+	if (count == 0) {
+		return RC_INVALID_KEY;
+	}
+
+	while (count) {
+		if (*(int *) tbuffer >= searchKey) {
+			return entry;
+		}
+		tbuffer += (KEY_SIZE + RECORD_ID_SIZE);
+		entry++;
+		count--;
+	}
+
+	return RC_INVALID_KEY;
+}
 
 /*
  * Read the (key, rid) pair from the eid entry.
@@ -139,7 +158,7 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
  */
 PageId BTLeafNode::getNextNodePtr()
 {
-	return *(int *) (this->buffer + PAGE_SIZE - PAGE_ID_SIZE - 1);
+	return *(int *) (this->buffer + PageFile::PAGE_SIZE - PAGE_ID_SIZE - 1);
 }
 
 /*
@@ -149,7 +168,7 @@ PageId BTLeafNode::getNextNodePtr()
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
 {
-	*(int *) (this->buffer + PAGE_SIZE - PAGE_ID_SIZE - 1) = pid;
+	*(int *) (this->buffer + PageFile::PAGE_SIZE - PAGE_ID_SIZE - 1) = pid;
 }
 
 /* ------------------------------------------------------------------- */
