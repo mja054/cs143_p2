@@ -122,11 +122,11 @@ int BTNonLeafNode::getKeyCount()
 	int ind = 0;
 	int numKeys = 0;
 
-	int tmpKey = -1;
-	PageId tmpPid = 0;
+	int tmpKey = 0;
+	PageId tmpPid = -2;
 
-	// assumes buffer has been initialized to 0
-	while(tmpKey != 0) {
+	// assumes buffer has been initialized to 0xff
+	while(tmpPid != -1) {
 		// Parse the pid first and increment the index
 		memcpy(&tmpPid, this->buffer + ind, sizeof(PageId));
 		ind += sizeof(PageId);
@@ -135,18 +135,13 @@ int BTNonLeafNode::getKeyCount()
 		memcpy(&tmpKey, this->buffer + ind, sizeof(int));
 		ind += sizeof(int);
 
-		// Check to see if key value is 0 or if we have run out of keys
-		if (tmpKey == 0) {
-			memcpy(&tmpPid, this->buffer + ind, sizeof(PageId));
-			// If next pid is valid (aka not 0), continue parsing
-			if (tmpPid != 0) {
-				numKeys++;
-				continue;
-			}
-		}
-		else
-			numKeys++;
+		// Assumes pid is not -1 until the final loop
+		// Corrects for this at the end
+		numKeys++;
 	}
+
+	// Need to offset the final loop
+	numKeys--;
 	return numKeys;
 }
 
@@ -182,11 +177,11 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
  */
 RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 { 
-	PageId currPid = 0;
-	int currKey = -1;
+	PageId currPid = -2;
+	int currKey = 0;
 	int ind = 0;
 
-	while(currKey != 0) {
+	while(currPid != -1) {
 		// Parse the pid first and increment the index
 		memcpy(&currPid, this->buffer + ind, sizeof(PageId));
 		ind += sizeof(PageId);
@@ -195,16 +190,15 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 		memcpy(&currKey, this->buffer + ind, sizeof(int));
 		ind += sizeof(int);
 
-		if ((searchKey < currKey) && (currKey != 0)) {
+		// If currKey is -1, we have passed the end of valid keys
+		if ((searchKey < currKey) || (currKey == -1)) {
 			pid = currPid;
 			return 0;
 		}
 	}
 
-	// break out of loop if currKey is 0
-	// assign last known pid to the output
-	pid = currPid;
-	return 0;
+	// Should send an error code if loop breaks before returning
+	return RC_INVALID_PID;
 }
 
 /*
@@ -216,8 +210,8 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
  */
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 {
-	// initialize the buffer to 0's
-	memset(this->buffer, 0, PageFile::PAGE_SIZE);
+	// initialize the buffer to 0xff
+	memset(this->buffer, 0xff, PageFile::PAGE_SIZE);
 
 	// copy the inputs into the buffer
 	memcpy(this->buffer, &pid1, sizeof(PageId));
