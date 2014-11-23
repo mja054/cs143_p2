@@ -3,6 +3,7 @@
 
 using namespace std;
 
+
 /*
  * Read the content of the node from the page pid in the PageFile pf.
  * @param pid[IN] the PageId to read
@@ -10,7 +11,9 @@ using namespace std;
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+{
+	return pf.read(pid, this->buffer);
+}
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -19,14 +22,46 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+{
+	return pf.write(pid, this->buffer);
+}
 
 /*
  * Return the number of keys stored in the node.
  * @return the number of keys in the node
  */
 int BTLeafNode::getKeyCount()
-{ return 0; }
+{
+	int count = 0;
+	char *tbuffer = this->buffer;
+
+	/*
+	 * Logic: We assume that the page is initialized to zero
+	 * and key value will never be 0.
+	 */
+	while (*(int *) tbuffer && (count < 70)) {
+		count++;
+		tbuffer += (RECORD_ID_SIZE + KEY_SIZE);
+	}
+
+	return count;
+}
+
+RC BTLeafNode::_insert(char *buffer, int count, int key, const RecordId& rid)
+{
+	int i = 0;
+
+	while (count && (key < *(int *) buffer)) {
+		memcpy(buffer + (RECORD_ID_SIZE + KEY_SIZE), buffer,
+		       RECORD_ID_SIZE + KEY_SIZE);
+		buffer -= (RECORD_ID_SIZE + KEY_SIZE);
+		count--;
+	}
+
+	memcpy(buffer, &key, KEY_SIZE);
+	memcpy(buffer + KEY_SIZE, &rid, RECORD_ID_SIZE);
+	return 0;
+}
 
 /*
  * Insert a (key, rid) pair to the node.
@@ -35,7 +70,20 @@ int BTLeafNode::getKeyCount()
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
-{ return 0; }
+{
+	int count = getKeyCount();
+	char *tbuffer = this->buffer;
+
+	if (count == MAX_LEAF_KEY_COUNT) {
+		return RC_NODE_FULL;
+	} else if (count == 0) {
+		memcpy(tbuffer, &key, KEY_SIZE);
+		memcpy(tbuffer + KEY_SIZE, &rid, RECORD_ID_SIZE);
+		return 0;
+	}
+	return _insert(tbuffer + (KEY_SIZE + RECORD_ID_SIZE) * (count - 1),
+		       count, key, rid);
+}
 
 /*
  * Insert the (key, rid) pair to the node
@@ -49,7 +97,51 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
  */
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
                               BTLeafNode& sibling, int& siblingKey)
-{ return 0; }
+{
+	int count = getKeyCount();
+	int i;
+	int mid;
+	char *tbuffer = this->buffer;
+
+	if (sibling.getKeyCount() != 0) {
+		retrurn RC_INVALID_ATTRIBUTE;
+	}
+
+	sibling.setNextNodePtr(getNextNodePtr());
+
+	if (_insert(this->buffer + (KEY_SIZE + RECORD_ID_SIZE) * (count - 1),
+		    count, key, rid)) {
+		;// handle error
+	}
+
+	count = getKeyCount();
+	mid = i = count / 2;
+	siblingKey = *(int *) (tbuffer + (mid * (KEY_SIZE + RECORD_ID_SIZE)));
+
+	tbuffer += (mid * (KEY_SIZE + RECORD_ID_SIZE))
+	while (i != count) {
+		int key = *(int *) tbuffer;
+		RecordId rid;
+		memcpy(&rid, tbuffer + KEY_SIZE, RECORD_ID_SIZE);
+		sibling.insert(key, rid)
+		tbuffer += (RECORD_ID_SIZE + KEY_SIZE);
+		i++;
+	}
+
+	// mark all the e
+	tbuffer = this->buffer;
+
+	memset(tbuffer + (mid * (KEY_SIZE + RECORD_ID_SIZE)), 0,
+	       (count - mid) * (KEY_SIZE + RECORD_ID_SIZE));
+
+	/*
+	 * TODO: I don't have the pid of the sibling to set nextNodePtr.
+	 * setNextNodePtr(getNextNodePtr());
+	 * *********************************
+	 */
+
+	return 0;
+}
 
 /*
  * Find the entry whose key value is larger than or equal to searchKey
@@ -60,7 +152,26 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::locate(int searchKey, int& eid)
-{ return 0; }
+{
+	char *tbuffer = this->buffer;
+	int count = getKeyCount();
+	int entry = 0;
+
+	if (count == 0) {
+		return RC_INVALID_KEY;
+	}
+
+	while (count) {
+		if (*(int *) tbuffer >= searchKey) {
+			return entry;
+		}
+		tbuffer += (KEY_SIZE + RECORD_ID_SIZE);
+		entry++;
+		count--;
+	}
+
+	return RC_INVALID_KEY;
+}
 
 /*
  * Read the (key, rid) pair from the eid entry.
@@ -70,14 +181,29 @@ RC BTLeafNode::locate(int searchKey, int& eid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
-{ return 0; }
+{
+	char *tbuffer;
+
+	if (eid == 0) {
+		tbuffer = this->buffer;
+	} else {
+		tbuffer = this->buffer + (KEY_SIZE + RECORD_ID_SIZE) * (eid - 1);
+	}
+
+	memcpy(&key, tbuffer, KEY_SIZE);
+	memcpy(&rid, tbuffer + KEY_SIZE, RECORD_ID_SIZE);
+
+	return 0;
+}
 
 /*
  * Return the pid of the next slibling node.
  * @return the PageId of the next sibling node 
  */
 PageId BTLeafNode::getNextNodePtr()
-{ return 0; }
+{
+	return *(int *) (this->buffer + PageFile::PAGE_SIZE - PAGE_ID_SIZE - 1);
+}
 
 /*
  * Set the pid of the next slibling node.
@@ -85,7 +211,9 @@ PageId BTLeafNode::getNextNodePtr()
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
-{ return 0; }
+{
+	*(int *) (this->buffer + PageFile::PAGE_SIZE - PAGE_ID_SIZE - 1) = pid;
+}
 
 /* ------------------------------------------------------------------- */
 
