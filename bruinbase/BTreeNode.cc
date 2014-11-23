@@ -118,14 +118,29 @@ RC BTLeafNode::locate(int searchKey, int& eid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
-{ return 0; }
+{
+	char *tbuffer;
+
+	if (eid == 0) {
+		tbuffer = this->buffer;
+	} else {
+		tbuffer = this->buffer + (KEY_SIZE + RECORD_ID_SIZE) * (eid - 1);
+	}
+
+	memcpy(&key, tbuffer, KEY_SIZE);
+	memcpy(&rid, tbuffer + KEY_SIZE, RECORD_ID_SIZE);
+
+	return 0;
+}
 
 /*
  * Return the pid of the next slibling node.
  * @return the PageId of the next sibling node 
  */
 PageId BTLeafNode::getNextNodePtr()
-{ return 0; }
+{
+	return *(int *) (this->buffer + PAGE_SIZE - PAGE_ID_SIZE - 1);
+}
 
 /*
  * Set the pid of the next slibling node.
@@ -133,7 +148,9 @@ PageId BTLeafNode::getNextNodePtr()
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
-{ return 0; }
+{
+	*(int *) (this->buffer + PAGE_SIZE - PAGE_ID_SIZE - 1) = pid;
+}
 
 /* ------------------------------------------------------------------- */
 
