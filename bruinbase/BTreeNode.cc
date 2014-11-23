@@ -97,7 +97,51 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
  */
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
                               BTLeafNode& sibling, int& siblingKey)
-{ return 0; }
+{
+	int count = getKeyCount();
+	int i;
+	int mid;
+	char *tbuffer = this->buffer;
+
+	if (sibling.getKeyCount() != 0) {
+		retrurn RC_INVALID_ATTRIBUTE;
+	}
+
+	sibling.setNextNodePtr(getNextNodePtr());
+
+	if (_insert(this->buffer + (KEY_SIZE + RECORD_ID_SIZE) * (count - 1),
+		    count, key, rid)) {
+		;// handle error
+	}
+
+	count = getKeyCount();
+	mid = i = count / 2;
+	siblingKey = *(int *) (tbuffer + (mid * (KEY_SIZE + RECORD_ID_SIZE)));
+
+	tbuffer += (mid * (KEY_SIZE + RECORD_ID_SIZE))
+	while (i != count) {
+		int key = *(int *) tbuffer;
+		RecordId rid;
+		memcpy(&rid, tbuffer + KEY_SIZE, RECORD_ID_SIZE);
+		sibling.insert(key, rid)
+		tbuffer += (RECORD_ID_SIZE + KEY_SIZE);
+		i++;
+	}
+
+	// mark all the e
+	tbuffer = this->buffer;
+
+	memset(tbuffer + (mid * (KEY_SIZE + RECORD_ID_SIZE)), 0,
+	       (count - mid) * (KEY_SIZE + RECORD_ID_SIZE));
+
+	/*
+	 * TODO: I don't have the pid of the sibling to set nextNodePtr.
+	 * setNextNodePtr(getNextNodePtr());
+	 * *********************************
+	 */
+
+	return 0;
+}
 
 /*
  * Find the entry whose key value is larger than or equal to searchKey
