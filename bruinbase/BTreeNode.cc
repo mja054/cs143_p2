@@ -225,8 +225,7 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
  */
 RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
 { 
-	RC rc = pf.read(pid, this->buffer);
-	return rc;
+	return pf.read(pid, this->buffer);
 }
     
 /*
@@ -237,8 +236,7 @@ RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
  */
 RC BTNonLeafNode::write(PageId pid, PageFile& pf)
 {
-	RC rc = pf.write(pid, this->buffer);
-	return rc;
+	return pf.write(pid, this->buffer);
 }
 
 /*
@@ -250,18 +248,18 @@ int BTNonLeafNode::getKeyCount()
 	int ind = 0;
 	int numKeys = 0;
 
-	int tmpKey = 0;
-	PageId tmpPid = -2;
+	int currKey = 0;
+	PageId currPid = -2;
 
 	// assumes buffer has been initialized to 0xff
-	while(tmpPid != -1) {
+	while(currPid != -1) {
 		// Parse the pid first and increment the index
-		memcpy(&tmpPid, this->buffer + ind, sizeof(PageId));
-		ind += sizeof(PageId);
+		memcpy(&currPid, this->buffer + ind, PAGE_ID_SIZE);
+		ind += PAGE_ID_SIZE;
 
 		// Parse the key next and increment the index
-		memcpy(&tmpKey, this->buffer + ind, sizeof(int));
-		ind += sizeof(int);
+		memcpy(&currKey, this->buffer + ind, KEY_SIZE);
+		ind += KEY_SIZE;
 
 		// Assumes pid is not -1 until the final loop
 		// Corrects for this at the end
@@ -311,12 +309,12 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 
 	while(currPid != -1) {
 		// Parse the pid first and increment the index
-		memcpy(&currPid, this->buffer + ind, sizeof(PageId));
-		ind += sizeof(PageId);
+		memcpy(&currPid, this->buffer + ind, PAGE_ID_SIZE);
+		ind += PAGE_ID_SIZE;
 
 		// Parse the key next and increment the index
-		memcpy(&currKey, this->buffer + ind, sizeof(int));
-		ind += sizeof(int);
+		memcpy(&currKey, this->buffer + ind, KEY_SIZE);
+		ind += KEY_SIZE;
 
 		// If currKey is -1, we have passed the end of valid keys
 		if ((searchKey < currKey) || (currKey == -1)) {
@@ -342,9 +340,9 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 	memset(this->buffer, 0xff, PageFile::PAGE_SIZE);
 
 	// copy the inputs into the buffer
-	memcpy(this->buffer, &pid1, sizeof(PageId));
-	memcpy(this->buffer + sizeof(PageId), &key, sizeof(int));
-	memcpy(this->buffer + sizeof(PageId) + sizeof(int), &pid2, sizeof(PageId));
+	memcpy(this->buffer, &pid1, PAGE_ID_SIZE);
+	memcpy(this->buffer + PAGE_ID_SIZE, &key, KEY_SIZE);
+	memcpy(this->buffer + PAGE_ID_SIZE + KEY_SIZE, &pid2, PAGE_ID_SIZE);
 
 	return 0; 
 }

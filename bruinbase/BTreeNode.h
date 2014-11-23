@@ -13,6 +13,10 @@
 #include "RecordFile.h"
 #include "PageFile.h"
 
+#define PAGE_ID_SIZE sizeof(PageId)
+#define RECORD_ID_SIZE sizeof(RecordId)
+#define KEY_SIZE sizeof(int)
+#define MAX_LEAF_KEY_COUNT 70
 
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
