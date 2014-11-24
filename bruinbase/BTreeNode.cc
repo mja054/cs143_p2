@@ -33,15 +33,16 @@ RC BTLeafNode::write(PageId pid, PageFile& pf)
 int BTLeafNode::getKeyCount()
 {
 	int count = 0;
+	int key;
+	RecordId rid;
 	char *tbuffer = this->buffer;
 
 	/*
 	 * Logic: We assume that the page is initialized to zero
 	 * and key value will never be 0.
 	 */
-	while (*(int *) tbuffer && (count < 70)) {
+	foreach(tbuffer, key, rid, rid.pid != -1) {
 		count++;
-		tbuffer += (BTLeafNode::RECORD_ID_SIZE + BTNonLeafNode::KEY_SIZE);
 	}
 
 	return count;
@@ -202,7 +203,8 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
  */
 PageId BTLeafNode::getNextNodePtr()
 {
-	return *(int *) (this->buffer + PageFile::PAGE_SIZE - BTNonLeafNode::PAGE_ID_SIZE - 1);
+	return *(int *) (this->buffer + PageFile::PAGE_SIZE -
+			 BTNonLeafNode::PAGE_ID_SIZE - 1);
 }
 
 /*
@@ -212,7 +214,8 @@ PageId BTLeafNode::getNextNodePtr()
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
 {
-	*(int *) (this->buffer + PageFile::PAGE_SIZE - BTNonLeafNode::PAGE_ID_SIZE - 1) = pid;
+	*(int *) (this->buffer + PageFile::PAGE_SIZE -
+		  BTNonLeafNode::PAGE_ID_SIZE - 1) = pid;
 }
 
 /* ------------------------------------------------------------------- */
