@@ -341,7 +341,33 @@ RC BTNonLeafNode::insert(int key, PageId pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, int& midKey)
-{ return 0; }
+{ 
+	if (sibling.getKeyCount() != 0) {
+		return RC_INVALID_ATTRIBUTE;
+	}
+	else {
+		// Insert the (key, pid) pair into the node first
+		this->insert(key, pid);
+
+		// Calculate the keyCount
+		int keyCount = this->getKeyCount();
+		int origBufferSize = keyCount * (BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE) + PAGE_ID_SIZE;
+		
+		// Reach the middle of the node
+		int ind = (keyCount / 2) * (BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE);
+
+		// New start of the sibling node
+		int newStart = ind + BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE;
+
+		// Copy the midKey and copy contents into new buffer
+		memcpy(&midKey, this->buffer + ind + BTNonLeafNode::PAGE_ID_SIZE, BTNonLeafNode::KEY_SIZE);
+		memcpy(&sibling.buffer, this->buffer + newStart, origBufferSize - newStart);
+
+		// Clear everything in the buffer starting from the midKey
+		memset(this->buffer + ind, 0xff, origBufferSize - ind);
+	}
+	return 0; 
+}
 
 /*
  * Given the searchKey, find the child-node pointer to follow and
