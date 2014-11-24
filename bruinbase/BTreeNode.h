@@ -13,6 +13,14 @@
 #include "RecordFile.h"
 #include "PageFile.h"
 
+#define foreach(buf, p1, p2, condition)					\
+	for (memcpy(&p1, buf, sizeof(p1)),				\
+		     memcpy(&p2, buf + sizeof(p1), sizeof(p2));		\
+	     condition;							\
+	     buf += (sizeof(p1) + sizeof(p2)),				\
+		     memcpy(&p1, buf, sizeof(p1)),                      \
+                     memcpy(&p2, buf + sizeof(p1), sizeof(p2)))
+
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
  *
