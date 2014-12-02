@@ -1,5 +1,6 @@
 #include "BTreeNode.h"
 #include <stdio.h>
+#include <iostream>
 
 using namespace std;
 
@@ -220,6 +221,10 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
 
 /* ------------------------------------------------------------------- */
 
+BTNonLeafNode::BTNonLeafNode() {
+	memset(this->buffer, 0xff, PageFile::PAGE_SIZE);
+}
+
 /*
  * Read the content of the node from the page pid in the PageFile pf.
  * @param pid[IN] the PageId to read
@@ -269,8 +274,8 @@ int BTNonLeafNode::getKeyCount()
 		numKeys++;
 	}
 
-	// Need to offset the final loop
-	numKeys--;
+	// Need to offset the final two loops
+	numKeys -= 2;
 	return numKeys;
 }
 
@@ -311,12 +316,15 @@ RC BTNonLeafNode::insert(int key, PageId pid)
 				// Move the index back to be before this current key
 				ind -= (BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE);
 
-				// Move the memory block over by one pid size
-				memmove(this->buffer + ind, &pid, BTNonLeafNode::PAGE_ID_SIZE);
-				ind += BTNonLeafNode::PAGE_ID_SIZE;
+				// Move the memory block over by one pid and one key size
+				memmove(this->buffer + ind + BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE,
+					this->buffer + ind, PageFile::PAGE_SIZE);
 
-				// Move the memory block over by one key size
-				memmove(this->buffer + ind, &key, BTNonLeafNode::KEY_SIZE);
+				// Copy PID and key into the buffer
+				memcpy(this->buffer + ind, &pid, BTNonLeafNode::KEY_SIZE);
+				ind += BTNonLeafNode::PAGE_ID_SIZE;
+				memcpy(this->buffer + ind, &key, BTNonLeafNode::KEY_SIZE);
+				ind += BTNonLeafNode::KEY_SIZE;
 				return 0;
 			}
 		}
@@ -425,3 +433,22 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 	return 0; 
 }
 
+void BTNonLeafNode::printBuffer() {
+	PageId currPid = 0;
+	int currKey = 0;
+	int buffInd = 0;
+
+	while (buffInd < PageFile::PAGE_SIZE && currPid != -1) {
+		// Parse the pid first and increment the index
+		memcpy(&currPid, this->buffer + buffInd, BTNonLeafNode::PAGE_ID_SIZE);
+		buffInd += BTNonLeafNode::PAGE_ID_SIZE;
+		cout << "PID is " << currPid << endl;
+
+		// Parse the key next and increment the index
+		memcpy(&currKey, this->buffer + buffInd, BTNonLeafNode::KEY_SIZE);
+		buffInd += BTNonLeafNode::KEY_SIZE;
+		cout << "Key is " << currKey << endl;
+	}
+
+	return;
+}

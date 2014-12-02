@@ -132,6 +132,8 @@ class BTLeafNode {
  */
 class BTNonLeafNode {
   public:
+    BTNonLeafNode();
+
    /**
     * Insert a (key, pid) pair to the node.
     * Remember that all keys inside a B+tree node should be kept sorted.
@@ -195,6 +197,8 @@ class BTNonLeafNode {
     * @return 0 if successful. Return an error code if there is an error.
     */
     RC write(PageId pid, PageFile& pf);
+
+    void printBuffer();
 
     const static int KEY_SIZE = sizeof(int);
     const static int PAGE_ID_SIZE = sizeof(PageId);
