@@ -275,7 +275,10 @@ int BTNonLeafNode::getKeyCount()
 	}
 
 	// Need to offset the final two loops
-	numKeys -= 2;
+	if (numKeys != 1)
+		numKeys -= 2;
+	else
+		numKeys = 0;
 	return numKeys;
 }
 
@@ -375,7 +378,7 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
 		memcpy(&sibling.buffer, this->buffer + newStart, origBufferSize - newStart);
 
 		// Clear everything in the buffer starting from the midKey
-		memset(this->buffer + ind, 0xff, origBufferSize - ind);
+		memset(this->buffer + ind + BTNonLeafNode::PAGE_ID_SIZE, 0xff, origBufferSize - ind);
 	}
 	return 0; 
 }
