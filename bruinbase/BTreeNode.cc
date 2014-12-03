@@ -126,10 +126,6 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
                               BTLeafNode& sibling, int& siblingKey)
 {
-	int count = getKeyCount();
-	int i;
-	int mid;
-	char *tbuffer = this->buffer;
 
 	if (sibling.getKeyCount() != 0) {
 		return RC_INVALID_ATTRIBUTE;
@@ -137,29 +133,28 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
 
 	sibling.setNextNodePtr(this->getNextNodePtr());
 
-	if (insert(key, rid)) {
+	// Insert the (key, pid) pair into the node first
+	if (this->insert(key, rid)) {
 		return RC_INVALID_ATTRIBUTE;// handle error
 	}
 
-	count = getKeyCount();
-	mid = i = count / 2;
-	siblingKey = *(int *) (tbuffer + (mid * (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE)));
+	// Calculate the keyCount
+	int keyCount = this->getKeyCount();
+	int origBufferSize = keyCount * (BTLeafNode::RECORD_ID_SIZE + BTNonLeafNode::KEY_SIZE);
+	
+	// Reach the middle of the node
+	int ind = (keyCount / 2) * (BTLeafNode::RECORD_ID_SIZE + BTNonLeafNode::KEY_SIZE);
 
-	tbuffer += (mid * (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE));
-	while (i != count) {
-		int key = *(int *) tbuffer;
-		RecordId rid;
-		memcpy(&rid, tbuffer + BTNonLeafNode::KEY_SIZE, BTLeafNode::RECORD_ID_SIZE);
-		sibling.insert(key, rid);
-		tbuffer += (BTLeafNode::RECORD_ID_SIZE + BTNonLeafNode::KEY_SIZE);
-		i++;
-	}
+	// New start of the sibling node
+	// int newStart = ind + BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE;
 
-	// mark all the e
-	tbuffer = this->buffer;
+	// Copy the midKey and copy contents into new buffer
+	memcpy(&siblingKey, this->buffer + ind + BTLeafNode::RECORD_ID_SIZE, BTNonLeafNode::KEY_SIZE);
+	memcpy(&sibling.buffer, this->buffer + ind, origBufferSize - ind);
 
-	memset(tbuffer + (mid * (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE)), 0xff,
-	       (count - mid) * (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE));
+	// Clear everything in the buffer starting from the midKey
+	memset(this->buffer + ind, 0xff, origBufferSize - ind);
+	return 0;
 
 	/*
 	 * TODO: I don't have the pid of the sibling to set nextNodePtr.
@@ -167,7 +162,6 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
 	 * *********************************
 	 */
 
-	return 0;
 }
 
 /*
@@ -189,15 +183,16 @@ RC BTLeafNode::locate(int searchKey, int& eid)
 	}
 
 	while (count) {
-		if (*(int *) tbuffer >= searchKey) {
-			return entry;
+		if (*(int *) (tbuffer + BTLeafNode::RECORD_ID_SIZE) >= searchKey) {
+			eid = entry;
+			return 0;
 		}
 		tbuffer += (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE);
 		entry++;
 		count--;
 	}
-
-	return RC_INVALID_ATTRIBUTE;
+	eid = entry;
+	return 0;
 }
 
 /*
@@ -210,12 +205,10 @@ RC BTLeafNode::locate(int searchKey, int& eid)
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
 {
 	char *tbuffer;
+	if (eid >= MAX_LEAF_KEY_COUNT)
+		return RC_INVALID_ATTRIBUTE;
 
-	if (eid == 0) {
-		tbuffer = this->buffer;
-	} else {
-		tbuffer = this->buffer + (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE) * (eid - 1);
-	}
+	tbuffer = this->buffer + (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE) * eid;
 
 	memcpy(&rid, tbuffer, BTLeafNode::RECORD_ID_SIZE);
 	memcpy(&key, tbuffer + BTLeafNode::RECORD_ID_SIZE, BTNonLeafNode::KEY_SIZE);
