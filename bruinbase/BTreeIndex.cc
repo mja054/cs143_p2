@@ -29,7 +29,7 @@ int BTreeIndex::fetch_new_page()
 {
 	PageId pid = pf.endPid();
 
-	memset(buffer, 0, PageFile::PAGE_SIZE);
+	memset(buffer, 0xff, PageFile::PAGE_SIZE);
 	pf.write(pid, buffer);
 
 	return pid;
@@ -103,6 +103,7 @@ BTreeIndex::_insert(int pid, int depth, int key, const RecordId& rid,
 {
 	RC ret;
 
+	// Leaf nodes
 	if (depth == treeHeight) {
 		BTLeafNode node;
 		node.read(pid, pf);
@@ -111,11 +112,13 @@ BTreeIndex::_insert(int pid, int depth, int key, const RecordId& rid,
 			BTLeafNode sibling;
 
 			splitpid = fetch_new_page();
-			sibling.read(splitpid, pf);
 			node.insertAndSplit(key, rid, sibling, splitkey);
+			sibling.write(splitpid, pf);
 			node.setNextNodePtr(splitpid);
 		}
+		node.write(pid, pf);
 	} else {
+	// NonLeaf nodes
 		PageId n_pid;
 		BTNonLeafNode node;
 		node.read(pid, pf);
@@ -128,19 +131,19 @@ BTreeIndex::_insert(int pid, int depth, int key, const RecordId& rid,
 				    rid, splitkey, splitpid);
 		if (ret == SUCCESS) {
 			// Do nothing
-			;
 		} else if (ret == RC_NODE_FULL) {
 			ret = node.insert(splitkey, splitpid);
 			if (ret == RC_NODE_FULL) {
 				PageId new_pid = fetch_new_page();
 				BTNonLeafNode sibling;
 				int midkey;
-				sibling.read(new_pid, pf);
 				node.insertAndSplit(splitkey, splitpid,
 						    sibling, midkey);
 				splitkey = midkey;
 				splitpid = new_pid;
+				sibling.write(new_pid, pf);
 			}
+			node.write(pid, pf);
 		}
 	}
 	return ret;
@@ -161,7 +164,6 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 		treeHeight = 1;
 		fetch_new_page();
 		rootPid = fetch_new_page();
-		commit_metadata();
 	}
 
 	ret = this->_insert(rootPid, 1, key, rid, splitkey, splitpid);
@@ -171,9 +173,9 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 		PageId new_pid = fetch_new_page();
 		BTNonLeafNode root_node;
 
-		root_node.read(new_pid, pf);
-		root_node.insert(splitkey, splitpid);
+		root_node.initializeRoot(rootPid, splitkey, splitpid);
 		rootPid = new_pid;
+		root_node.write(new_pid, pf);
 		treeHeight++;
 	}
 
