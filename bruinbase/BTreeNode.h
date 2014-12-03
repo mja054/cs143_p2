@@ -12,6 +12,7 @@
 
 #include "RecordFile.h"
 #include "PageFile.h"
+#include <queue>
 
 #define foreach(buf, p1, p2, condition)					\
 	for (memcpy(&p1, buf, sizeof(p1)),				\
@@ -202,6 +203,7 @@ class BTNonLeafNode {
     RC write(PageId pid, PageFile& pf);
 
     void printBuffer();
+    void printBuffer(std::queue<PageId>&);
 
     const static int KEY_SIZE = sizeof(int);
     const static int PAGE_ID_SIZE = sizeof(PageId);

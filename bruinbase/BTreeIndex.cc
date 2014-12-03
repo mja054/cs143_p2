@@ -59,6 +59,41 @@ int BTreeIndex::commit_metadata()
 	return pf.write(BTINDEX_MD_PID, buffer);
 }
 
+void BTreeIndex::printTree() {
+	queue<PageId> bfs;
+	bfs.push(rootPid);
+	bfs.push(-1);
+	BTNonLeafNode currNonLeafNode;
+	BTLeafNode currLeafNode;
+	int currHeight = 1;
+	PageId currPid = -1;
+	while(!bfs.empty()) {
+		currPid = bfs.front();
+		bfs.pop();
+		if (currPid == -1) {
+			cout << endl;
+			if (bfs.empty())
+				break;
+			bfs.push(-1);
+			currHeight++;
+		}
+		else {
+			if (currHeight == treeHeight) {
+				currLeafNode.read(currPid, pf);
+				currLeafNode.printBuffer();
+				cout << "||";
+			}
+			else {
+				currNonLeafNode.read(currPid, pf);
+				currNonLeafNode.printBuffer(bfs);
+				cout << "||";
+			}
+
+		}
+	}
+	return;
+}
+
 /*
  * BTreeIndex constructor
  */

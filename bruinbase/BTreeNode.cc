@@ -246,13 +246,11 @@ void BTLeafNode::printBuffer() {
 		// Parse the pid first and increment the index
 		memcpy(&currRid, this->buffer + buffInd, BTLeafNode::RECORD_ID_SIZE);
 		buffInd += BTLeafNode::RECORD_ID_SIZE;
-		cout << "RID pid is " << currRid.pid << endl;
-		cout << "RID sid is " << currRid.sid << endl;
 
 		// Parse the key next and increment the index
 		memcpy(&currKey, this->buffer + buffInd, BTNonLeafNode::KEY_SIZE);
 		buffInd += BTNonLeafNode::KEY_SIZE;
-		cout << "Key is " << currKey << endl;
+		cout << " " << currKey;
 	}
 
 	return;
@@ -494,3 +492,26 @@ void BTNonLeafNode::printBuffer() {
 
 	return;
 }
+
+void BTNonLeafNode::printBuffer(queue<PageId>& pidQueue) {
+	PageId currPid = 0;
+	int currKey = 0;
+	int buffInd = 0;
+
+	while (buffInd < PageFile::PAGE_SIZE && currPid != -1) {
+		// Parse the pid first and increment the index
+		memcpy(&currPid, this->buffer + buffInd, BTNonLeafNode::PAGE_ID_SIZE);
+		buffInd += BTNonLeafNode::PAGE_ID_SIZE;
+		cout << " " << currPid;
+		if (currPid != -1)
+			pidQueue.push(currPid);
+
+		// Parse the key next and increment the index
+		memcpy(&currKey, this->buffer + buffInd, BTNonLeafNode::KEY_SIZE);
+		buffInd += BTNonLeafNode::KEY_SIZE;
+		cout << " " << currKey;
+	}
+
+	return;
+}
+

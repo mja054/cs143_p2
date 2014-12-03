@@ -13,6 +13,8 @@
 #include "Bruinbase.h"
 #include "PageFile.h"
 #include "RecordFile.h"
+#include <queue>
+#include <iostream>
 
 #define BTINDEX_MD_PID 0
 /**
@@ -90,6 +92,7 @@ class BTreeIndex {
    * @return error code. 0 if no error
    */
   RC readForward(IndexCursor& cursor, int& key, RecordId& rid);
+  void printTree();
 
  private:
   PageFile pf;         /// the PageFile used to store the actual b+tree in disk
