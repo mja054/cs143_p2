@@ -135,11 +135,10 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
 		return RC_INVALID_ATTRIBUTE;
 	}
 
-	sibling.setNextNodePtr(getNextNodePtr());
+	sibling.setNextNodePtr(this->getNextNodePtr());
 
-	if (_insert(this->buffer + (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE) * (count - 1),
-		    count, key, rid)) {
-		;// handle error
+	if (insert(key, rid)) {
+		return RC_INVALID_ATTRIBUTE;// handle error
 	}
 
 	count = getKeyCount();
@@ -159,7 +158,7 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
 	// mark all the e
 	tbuffer = this->buffer;
 
-	memset(tbuffer + (mid * (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE)), 0,
+	memset(tbuffer + (mid * (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE)), 0xff,
 	       (count - mid) * (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE));
 
 	/*
@@ -218,14 +217,14 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
 		tbuffer = this->buffer + (BTNonLeafNode::KEY_SIZE + BTLeafNode::RECORD_ID_SIZE) * (eid - 1);
 	}
 
-	memcpy(&key, tbuffer, BTNonLeafNode::KEY_SIZE);
-	memcpy(&rid, tbuffer + BTNonLeafNode::KEY_SIZE, BTLeafNode::RECORD_ID_SIZE);
+	memcpy(&rid, tbuffer, BTLeafNode::RECORD_ID_SIZE);
+	memcpy(&key, tbuffer + BTLeafNode::RECORD_ID_SIZE, BTNonLeafNode::KEY_SIZE);
 
 	return 0;
 }
 
 /*
- * Return the pid of the next slibling node.
+ * Return the pid of the next sibling node.
  * @return the PageId of the next sibling node 
  */
 PageId BTLeafNode::getNextNodePtr()
@@ -235,7 +234,7 @@ PageId BTLeafNode::getNextNodePtr()
 }
 
 /*
- * Set the pid of the next slibling node.
+ * Set the pid of the next sibling node.
  * @param pid[IN] the PageId of the next sibling node 
  * @return 0 if successful. Return an error code if there is an error.
  */

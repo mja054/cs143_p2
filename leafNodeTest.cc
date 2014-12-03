@@ -29,13 +29,12 @@ int main() {
 	cout << endl;
 	test->printBuffer();
 
-	/*
 	// Testing insertAndSplit
 	int testKey4 = 40;
-	PageId pid5 = 12;
+	RecordId rid4 = {3, 12};
 	BTLeafNode* testSplit = new BTLeafNode();
 	int testKey5 = 100;
-	test->insertAndSplit(testKey4, pid5, *testSplit, testKey5);
+	test->insertAndSplit(testKey4, rid4, *testSplit, testKey5);
 	cout << endl;
 	test->printBuffer();
 	cout << endl;
@@ -43,6 +42,7 @@ int main() {
 	cout << endl;
 	cout << "Return key is " << testKey5 << endl;
 
+	/*
 	// Testing locateChildPtr
 	int searchKey = 35;
 	PageId pid6 = 100;
