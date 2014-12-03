@@ -9,10 +9,16 @@ int main() {
 	test.open("testIndex.ind", 'w');
 	RecordId rid = {0, 0};
 	int i = 0; 
-	for(int i = 0; i < 71; i++) {
+	for(int i = 0; i < 500; i += 2) {
 		test.insert(i, rid);
 	}
-	//test.printTree();
+	cout << "insert complete" << endl;
+	test.printTree();
+	for(int j = 1; j < 500; j += 2) {
+		test.insert(j, rid);
+	}
+	cout << "insert complete" << endl;
+	test.printTree();
 	test.close();
 	/*
 	BTLeafNode* test = new BTLeafNode();

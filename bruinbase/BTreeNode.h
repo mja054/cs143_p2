@@ -120,7 +120,7 @@ class BTLeafNode {
     void printBuffer();
 
  private:
-    RC _insert(char *buffer, int count, int key, const RecordId& rid);
+    RC _insert(int key, const RecordId& rid);
    /**
     * The main memory buffer for loading the content of the disk page 
     * that contains the node.
@@ -209,6 +209,7 @@ class BTNonLeafNode {
     const static int PAGE_ID_SIZE = sizeof(PageId);
 
   private:
+    RC _insert(int key, PageId pid);
    /**
     * The main memory buffer for loading the content of the disk page 
     * that contains the node.

@@ -44,7 +44,7 @@ int main() {
 	cout << "Return key is " << testKey5 << endl;
 
 	// Testing locateChildPtr
-	int searchKey = 35;
+	int searchKey = 25;
 	PageId pid6 = 100;
 	test->locateChildPtr(searchKey, pid6);
 	cout << "Return pid is " << pid6 << endl;
