@@ -37,6 +37,7 @@
 
 class BTLeafNode {
   public:
+    BTLeafNode();
    /**
     * Insert the (key, rid) pair to the node.
     * Remember that all keys inside a B+tree node should be kept sorted.
@@ -114,6 +115,8 @@ class BTLeafNode {
     * @return 0 if successful. Return an error code if there is an error.
     */
     RC write(PageId pid, PageFile& pf);
+
+    void printBuffer();
 
  private:
     RC _insert(char *buffer, int count, int key, const RecordId& rid);
