@@ -6,11 +6,58 @@
  * @author Junghoo "John" Cho <cho AT cs.ucla.edu>
  * @date 3/24/2008
  */
- 
+
 #include "BTreeIndex.h"
 #include "BTreeNode.h"
 
 using namespace std;
+#define SUCCESS 0
+/*
+ **********************************************************
+ * BTreeIndex metadata format:
+ * ===========================
+ *
+ * -----------------------------------------
+ * |  rootPid  |  treeHeight  |         |  |
+ * -----------------------------------------
+ *    4Bytes       4Bytes
+ *
+ **********************************************************
+ */
+
+int BTreeIndex::fetch_new_page()
+{
+	PageId pid = pf.endPid();
+
+	memset(buffer, 0, PageFile::PAGE_SIZE);
+	pf.write(pid, buffer);
+
+	return pid;
+}
+
+
+int BTreeIndex::read_metadata()
+{
+	int *ptr = (int *) buffer;
+
+	if (!pf.read(BTINDEX_MD_PID, buffer)) {
+		rootPid = *ptr;
+		treeHeight = *(ptr + 1);
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+int BTreeIndex::commit_metadata()
+{
+	int *ptr = (int *) buffer;
+
+	*ptr = rootPid;
+	*(ptr + 1) = treeHeight;
+
+	return pf.write(BTINDEX_MD_PID, buffer);
+}
 
 /*
  * BTreeIndex constructor
@@ -18,6 +65,7 @@ using namespace std;
 BTreeIndex::BTreeIndex()
 {
     rootPid = -1;
+    treeHeight = 0;
 }
 
 /*
@@ -29,7 +77,14 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
-    return 0;
+	pf.open(indexname, mode);
+	if (pf.endPid() == 0) {
+		rootPid = -1;
+		treeHeight = 0;
+	} else {
+		read_metadata();
+	}
+	return 0;
 }
 
 /*
@@ -38,7 +93,56 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
-    return 0;
+	commit_metadata();
+	return pf.close();
+}
+
+RC
+BTreeIndex::_insert(int pid, int depth, int key, const RecordId& rid,
+		    int &splitkey, int &splitpid)
+{
+	RC ret;
+
+	if (depth == treeHeight) {
+		BTLeafNode node;
+		node.read(pid, pf);
+		ret = node.insert(key, rid);
+		if (ret == RC_NODE_FULL) {
+			BTLeafNode sibling;
+
+			splitpid = fetch_new_page();
+			sibling.read(splitpid, pf);
+			node.insertAndSplit(key, rid, sibling, splitkey);
+		}
+	} else {
+		PageId n_pid;
+		BTNonLeafNode node;
+		node.read(pid, pf);
+		ret = node.locateChildPtr(key, n_pid);
+		if (ret) {
+			return ret;
+		}
+
+		ret = this->_insert(n_pid, depth + 1, key,
+				    rid, splitkey, splitpid);
+		if (ret == SUCCESS) {
+			// Do nothing
+			;
+		} else if (ret == RC_NODE_FULL) {
+			ret = node.insert(splitkey, splitpid);
+			if (ret == RC_NODE_FULL) {
+				PageId new_pid = fetch_new_page();
+				BTNonLeafNode sibling;
+				int midkey;
+				sibling.read(new_pid, pf);
+				node.insertAndSplit(splitkey, splitpid,
+						    sibling, midkey);
+				splitkey = midkey;
+				splitpid = new_pid;
+			}
+		}
+	}
+	return ret;
 }
 
 /*
@@ -49,21 +153,44 @@ RC BTreeIndex::close()
  */
 RC BTreeIndex::insert(int key, const RecordId& rid)
 {
-    return 0;
+	RC ret;
+	int splitkey = -1, splitpid = -1;
+
+	if (treeHeight == 0) {
+		treeHeight = 1;
+		rootPid = fetch_new_page();
+		commit_metadata();
+	}
+
+	ret = this->_insert(rootPid, 1, key, rid, splitkey, splitpid);
+	// check if there was a split, we should create new node
+	// and initialize it as root, and also update rootPid
+	if (ret == RC_NODE_FULL) {
+		PageId new_pid = fetch_new_page();
+		BTNonLeafNode root_node;
+
+		root_node.read(new_pid, pf);
+		root_node.insert(splitkey, splitpid);
+		rootPid = new_pid;
+		treeHeight++;
+	}
+
+	return 0;
 }
 
+
 /*
- * Find the leaf-node index entry whose key value is larger than or 
+ * Find the leaf-node index entry whose key value is larger than or
  * equal to searchKey, and output the location of the entry in IndexCursor.
  * IndexCursor is a "pointer" to a B+tree leaf-node entry consisting of
  * the PageId of the node and the SlotID of the index entry.
  * Note that, for range queries, we need to scan the B+tree leaf nodes.
  * For example, if the query is "key > 1000", we should scan the leaf
  * nodes starting with the key value 1000. For this reason,
- * it is better to return the location of the leaf node entry 
+ * it is better to return the location of the leaf node entry
  * for a given searchKey, instead of returning the RecordId
  * associated with the searchKey directly.
- * Once the location of the index entry is identified and returned 
+ * Once the location of the index entry is identified and returned
  * from this function, you should call readForward() to retrieve the
  * actual (key, rid) pair from the index.
  * @param key[IN] the key to find.
