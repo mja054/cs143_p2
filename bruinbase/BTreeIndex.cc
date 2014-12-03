@@ -252,5 +252,29 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
  */
 RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
+	PageId currPid = cursor.pid;
+	int currEid = cursor.eid;
+	BTLeafNode currLeaf;
+
+	// Reading in the page from the cursor
+	currLeaf.read(currPid, pf);
+	int offset = currEid * (BTLeafNode::RECORD_ID_SIZE + BTNonLeafNode::KEY_SIZE);
+
+	// Reading in the key and rid from the page
+	memcpy(&rid, currLeaf.buffer + offset, BTLeafNode::RECORD_ID_SIZE);
+	offset += BTLeafNode::RECORD_ID_SIZE;
+	memcpy(&key, currLeaf.buffer + offset, BTLeafNode::KEY_ID_SIZE);
+	offset += BTLeafNode::KEY_ID_SIZE;
+
+	// Check to see if we have reached the end of valid (key, rid) pairs
+	RecordId checkEnd;
+	memcpy(&checkEnd, currLeaf.buffer + offset, BTLeafNode::RECORD_ID_SIZE);
+	if (checkEnd.pid != -1) {
+		cursor.eid++;
+	} else {
+		cursor.eid = 0;
+		cursor.pid = currLeaf.getNextNodePtr();
+	}
+
     return 0;
 }
