@@ -113,6 +113,7 @@ BTreeIndex::_insert(int pid, int depth, int key, const RecordId& rid,
 			splitpid = fetch_new_page();
 			sibling.read(splitpid, pf);
 			node.insertAndSplit(key, rid, sibling, splitkey);
+			node.setNextNodePtr(splitpid);
 		}
 	} else {
 		PageId n_pid;
@@ -158,6 +159,7 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 
 	if (treeHeight == 0) {
 		treeHeight = 1;
+		fetch_new_page();
 		rootPid = fetch_new_page();
 		commit_metadata();
 	}
