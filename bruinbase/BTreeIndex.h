@@ -109,6 +109,8 @@ class BTreeIndex {
   int fetch_new_page();
   RC _insert(int pid, int depth, int key, const RecordId& rid,
 	     int &splitkey, int &splitpid);
+  RC _locate(PageId pid, int depth, int searchKey,
+	     IndexCursor& cursor);
 };
 
 #endif /* BTREEINDEX_H */

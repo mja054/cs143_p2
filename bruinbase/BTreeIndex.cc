@@ -218,6 +218,32 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 }
 
 
+RC BTreeIndex::_locate(PageId pid, int depth, int searchKey,
+		       IndexCursor& cursor)
+{
+	RC ret;
+
+	if (depth == treeHeight) {
+		BTLeafNode node;
+		node.read(pid, pf);
+		ret = node.locate(searchKey, cursor.eid);
+		if (ret == SUCCESS) {
+			cursor.pid = pid;
+		}
+		return ret;
+	} else {
+		int new_pid;
+		BTNonLeafNode node;
+
+		node.read(pid, pf);
+		if ((ret = node.locateChildPtr(searchKey, new_pid))) {
+			return ret;
+		}
+		return _locate(new_pid, depth + 1, searchKey, cursor);
+	}
+	return 0;
+}
+
 /*
  * Find the leaf-node index entry whose key value is larger than or
  * equal to searchKey, and output the location of the entry in IndexCursor.
@@ -236,10 +262,16 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
  * @param cursor[OUT] the cursor pointing to the first index entry
  *                    with the key value.
  * @return error code. 0 if no error.
+ *    RC_NO_SUCH_RECORD - when there are no entries
  */
 RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
 {
-    return 0;
+	if (treeHeight == 0) {
+		return RC_NO_SUCH_RECORD;
+	}
+
+	return _locate(rootPid, 1 /* depth */,
+		       searchKey, cursor);
 }
 
 /*
