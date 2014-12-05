@@ -12,8 +12,12 @@
 #include <fstream>
 #include "Bruinbase.h"
 #include "SqlEngine.h"
+#include "BTreeIndex.h"
 
 using namespace std;
+
+#define index_file(name) name + ".idx"
+#define table_file(name) name + ".tbl"
 
 // external functions and variables for load file and sql command parsing 
 extern FILE* sqlin;
@@ -131,13 +135,12 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 {
 	int key;
-	string value;
+	string value, line;
 	ifstream infile;
 	RecordId rid = {0, 0};
-	string name = table;
 	RecordFile rf;
 	RC rc;
-	string line;
+	BTreeIndex btIndex;
 
 	infile.open(loadfile.c_str());
 	if (!infile.is_open()) {
@@ -145,9 +148,13 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 		return -1;
 	}
 
-	if ((rc = rf.open(table + ".tbl", 'w')) < 0) {
+	if ((rc = rf.open(table_file(table), 'w')) < 0) {
 		fprintf(stderr, "Error: table %s does not exist\n", table.c_str());
 		return rc;
+	}
+
+	if (index) {
+		btIndex.open(index_file(table), 'w');
 	}
 
 	while(getline(infile, line)) {
@@ -158,6 +165,14 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 				key, value.c_str());
 			return rc;
 		}
+		if (index && (rc = btIndex.insert(key, rid))) {
+			fprintf(stderr, "LOAD: BTreeIndex insert failed on "
+				"key = %d with error = %d\n", key, rc);
+			break;
+		}
+	}
+	if (index && btIndex.close()) {
+		fprintf(stderr, "LOAD, BTreeIndex close failed.\n");
 	}
 	rf.close();
 	infile.close();
