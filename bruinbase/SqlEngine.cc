@@ -94,11 +94,33 @@ SqlEngine::preprocess_selcond(vector<SelCond>& new_cond,
 }
 
 RC
+SqlEngine::find_key(vector<SelCond> cond, int& key)
+{
+	for (vector<SelCond>::const_iterator it = cond.begin();
+	     it != cond.end(); ++it) {
+		if (it->attr == 1 &&
+		    (it->comp == SelCond::GE ||
+		     it->comp == SelCond::GT)) {
+			key = it->intValue;
+		}
+	}
+
+	for (vector<SelCond>::const_iterator it = cond.begin();
+	     it != cond.end(); ++it) {
+		if (it->attr == 1 && it->comp == SelCond::EQ) {
+			key = it->intValue;
+		}
+	}
+
+	return 0;
+}
+
+RC
 SqlEngine::select_from_index(BTreeIndex btIndex, int attr,
 			     const string& table,
 			     const vector<SelCond>& cond)
 {
-	int key;
+	int key = 0;
 	string value;
 	RecordId rid;
 	RecordFile rf;
@@ -106,6 +128,12 @@ SqlEngine::select_from_index(BTreeIndex btIndex, int attr,
 	vector<SelCond> new_cond;
 
 	preprocess_selcond(new_cond, cond);
+
+	find_key(new_cond, key);
+
+	//	print_tuples(btIndex, attr, table, new_cond, key);
+
+	return btIndex.close();
 }
 
 RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)

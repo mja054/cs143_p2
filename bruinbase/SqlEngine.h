@@ -78,6 +78,8 @@ class SqlEngine {
 
   static RC preprocess_selcond(std::vector<SelCond>& new_cond,
 			       const std::vector<SelCond>& cond);
+
+  static RC find_key(std::vector<SelCond> cond, int& key);
 };
 
 #endif /* SQLENGINE_H */
