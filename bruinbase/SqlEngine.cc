@@ -36,16 +36,94 @@ RC SqlEngine::run(FILE* commandline)
   return 0;
 }
 
+RC
+SqlEngine::_preprocess_selcond(vector<SelCond>& condV, struct SelCond cond)
+{
+	for (vector<SelCond>::iterator it = condV.begin();
+	     it != condV.end(); ++it) {
+		if (cond.attr == 1 && it->comp == cond.comp) {
+			int value = atoi(cond.value);
+			switch(cond.comp) {
+			case SelCond::LT:
+			case SelCond::LE:
+				// Choose more conservative
+				it->value = value < it->intValue ?
+					cond.value : it->value;
+				it->intValue = value < it->intValue ?
+					value : it->intValue;
+				return 0;
+			case SelCond::GT:
+			case SelCond::GE:
+				it->value = (value > it->intValue) ?
+					cond.value : it->value;
+				it->intValue = (value > it->intValue) ?
+					value : it->intValue;
+				return 0;
+			case SelCond::EQ:
+			case SelCond::NE:
+				it->value = cond.value;
+				it->intValue = value;
+				return 0;
+			default:
+				goto push;
+			}
+		}
+	}
+ push:
+	if (cond.attr == 1) {
+		cond.intValue = atoi(cond.value);
+	}
+	condV.push_back(cond);
+
+	return 0;
+}
+
+RC
+SqlEngine::preprocess_selcond(vector<SelCond>& new_cond,
+			      const vector<SelCond>& cond)
+{
+	for (vector<SelCond>::const_iterator it = cond.begin();
+	     it != cond.end(); ++it) {
+		_preprocess_selcond(new_cond, *it);
+	}
+	// for (vector<SelCond>::const_iterator it = new_cond.begin();
+	//      it != new_cond.end(); ++it) {
+	// 	cout << "attr: " << it->attr << ", comp: " << it->comp;
+	// 	cout << ", value: " << it->value << endl;
+	// }
+}
+
+RC
+SqlEngine::select_from_index(BTreeIndex btIndex, int attr,
+			     const string& table,
+			     const vector<SelCond>& cond)
+{
+	int key;
+	string value;
+	RecordId rid;
+	RecordFile rf;
+	IndexCursor cursor;
+	vector<SelCond> new_cond;
+
+	preprocess_selcond(new_cond, cond);
+}
+
 RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 {
   RecordFile rf;   // RecordFile containing the table
   RecordId   rid;  // record cursor for table scanning
+  BTreeIndex btIndex;
 
   RC     rc;
   int    key;     
   string value;
   int    count;
   int    diff;
+
+  // check if the index file exists?
+  if (!btIndex.open(index_file(table), 'r')) {
+	  return select_from_index(btIndex, attr, table, cond);
+  }
 
   // open the table file
   if ((rc = rf.open(table + ".tbl", 'r')) < 0) {

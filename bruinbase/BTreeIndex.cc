@@ -112,7 +112,12 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
-	pf.open(indexname, mode);
+	RC ret;
+
+	if ((ret = pf.open(indexname, mode))) {
+		return ret;
+	}
+
 	if (pf.endPid() == 0) {
 		rootPid = -1;
 		treeHeight = 0;
