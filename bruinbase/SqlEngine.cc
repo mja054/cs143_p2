@@ -116,22 +116,110 @@ SqlEngine::find_key(vector<SelCond> cond, int& key)
 }
 
 RC
+SqlEngine::print_tuples(BTreeIndex btIndex, int attr,
+			const string& table, int key,
+			vector<SelCond> cond)
+{
+	RC rc;
+	int count = 0;
+	string value;
+	RecordId rid;
+	RecordFile rf;
+	IndexCursor cursor;
+
+	if ((rc = rf.open(table_file(table), 'r')) < 0) {
+		fprintf(stderr, "Error: table %s does not exist\n", table.c_str());
+		return rc;
+	}
+
+	if (btIndex.locate(key, cursor)) {
+		fprintf(stderr, "Error: BTreeIndex locate on %d failed\n", key);
+		return -1;
+	}
+
+	while (!btIndex.readForward(cursor, key, rid) &&
+	       !rf.read(rid, key, value)) {
+		for (vector<SelCond>::const_iterator it = cond.begin();
+		     it != cond.end(); ++it) {
+			if (it->attr == 1) {
+				switch (it->comp) {
+				case SelCond::LT:
+					if (key >= it->intValue) {
+						goto out;
+					}
+					break;
+				case SelCond::LE:
+					if (key > it->intValue) {
+						goto out;
+					}
+					break;
+				case SelCond::GT:
+					if (key <= it->intValue) {
+						goto out;
+					}
+					break;
+				case SelCond::GE:
+					if (key < it->intValue) {
+						goto out;
+					}
+					break;
+				case SelCond::EQ:
+					if (key != it->intValue) {
+						goto out;
+					}
+					break;
+				case SelCond::NE:
+					if (key == it->intValue) {
+						goto nextIter;
+					}
+					break;
+				}
+			} else {
+				// attr is type value
+				if (strcmp(value.c_str(), it->value)) {
+					goto nextIter;
+				}
+			}
+		}
+		count++;
+
+		// print the tuple 
+		switch (attr) {
+		case 1:  // SELECT key
+			fprintf(stdout, "%d\n", key);
+			break;
+		case 2:  // SELECT value
+			fprintf(stdout, "%s\n", value.c_str());
+			break;
+		case 3:  // SELECT *
+			fprintf(stdout, "%d '%s'\n", key, value.c_str());
+			break;
+		}
+	nextIter:
+		;
+	}
+ out:
+	// print matching tuple count if "select count(*)"
+	if (attr == 4) {
+		fprintf(stdout, "%d\n", count);
+	}
+
+	return 0;
+}
+
+RC
 SqlEngine::select_from_index(BTreeIndex btIndex, int attr,
 			     const string& table,
 			     const vector<SelCond>& cond)
 {
 	int key = 0;
-	string value;
-	RecordId rid;
-	RecordFile rf;
-	IndexCursor cursor;
 	vector<SelCond> new_cond;
 
 	preprocess_selcond(new_cond, cond);
 
 	find_key(new_cond, key);
 
-	//	print_tuples(btIndex, attr, table, new_cond, key);
+	print_tuples(btIndex, attr, table, key, new_cond);
 
 	return btIndex.close();
 }

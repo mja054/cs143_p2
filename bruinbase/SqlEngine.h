@@ -80,6 +80,10 @@ class SqlEngine {
 			       const std::vector<SelCond>& cond);
 
   static RC find_key(std::vector<SelCond> cond, int& key);
+
+  static RC print_tuples(BTreeIndex btIndex, int attr,
+			 const std::string& table, int key,
+			 std::vector<SelCond> cond);
 };
 
 #endif /* SQLENGINE_H */
