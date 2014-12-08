@@ -99,9 +99,15 @@ SqlEngine::find_key(vector<SelCond> cond, int& key)
 	for (vector<SelCond>::const_iterator it = cond.begin();
 	     it != cond.end(); ++it) {
 		if (it->attr == 1 &&
-		    (it->comp == SelCond::GE ||
-		     it->comp == SelCond::GT)) {
-			key = it->intValue;
+		    it->comp == SelCond::GE) {
+				key = it->intValue;
+		} 
+	}
+	for (vector<SelCond>::const_iterator it = cond.begin();
+	     it != cond.end(); ++it) {
+		if (it->attr == 1 &&
+		    it->comp == SelCond::GT) {
+				key = it->intValue + 1;
 		}
 	}
 
