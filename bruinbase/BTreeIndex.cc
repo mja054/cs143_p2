@@ -133,7 +133,6 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
-	commit_metadata();
 	return pf.close();
 }
 
@@ -204,6 +203,7 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 		treeHeight = 1;
 		fetch_new_page();
 		rootPid = fetch_new_page();
+		commit_metadata();
 	}
 
 	ret = this->_insert(rootPid, 1, key, rid, splitkey, splitpid);
@@ -217,6 +217,7 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 		rootPid = new_pid;
 		root_node.write(new_pid, pf);
 		treeHeight++;
+		commit_metadata();
 	}
 
 	return 0;

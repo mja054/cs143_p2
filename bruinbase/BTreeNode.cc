@@ -85,6 +85,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 			ind += BTNonLeafNode::KEY_SIZE;
 
 			if ((key < currKey) || (currKey == -1)) {
+				PageId nextPid = getNextNodePtr();
 				// Move the index back to be before this current key
 				ind -= (BTLeafNode::RECORD_ID_SIZE + BTNonLeafNode::KEY_SIZE);
 
@@ -93,10 +94,14 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 					this->buffer + ind, PageFile::PAGE_SIZE - (ind + BTLeafNode::RECORD_ID_SIZE + BTNonLeafNode::KEY_SIZE));
 
 				// Copy RID and key into the buffer
-				memcpy(this->buffer + ind, &rid, BTLeafNode::RECORD_ID_SIZE);
+				memcpy(this->buffer + ind, &rid,
+				       BTLeafNode::RECORD_ID_SIZE);
 				ind += BTLeafNode::RECORD_ID_SIZE;
-				memcpy(this->buffer + ind, &key, BTNonLeafNode::KEY_SIZE);
+
+				memcpy(this->buffer + ind, &key,
+				       BTNonLeafNode::KEY_SIZE);
 				ind += BTNonLeafNode::KEY_SIZE;
+				setNextNodePtr(nextPid);
 				return 0;
 			}
 		}
@@ -272,8 +277,13 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
  */
 PageId BTLeafNode::getNextNodePtr()
 {
-	return *(int *) (this->buffer + PageFile::PAGE_SIZE -
-			 BTNonLeafNode::PAGE_ID_SIZE - 1);
+	PageId pid;
+
+	memcpy(&pid, this->buffer + PageFile::PAGE_SIZE - BTNonLeafNode::PAGE_ID_SIZE,
+	       BTNonLeafNode::PAGE_ID_SIZE);
+	// return *(int *) (this->buffer + PageFile::PAGE_SIZE -
+	// 		 BTNonLeafNode::PAGE_ID_SIZE);
+	return pid;
 }
 
 /*
@@ -283,8 +293,14 @@ PageId BTLeafNode::getNextNodePtr()
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
 {
-	*(int *) (this->buffer + PageFile::PAGE_SIZE -
-		  BTNonLeafNode::PAGE_ID_SIZE - 1) = pid;
+	memset(this->buffer + PageFile::PAGE_SIZE - BTNonLeafNode::PAGE_ID_SIZE, 0,
+	       BTNonLeafNode::PAGE_ID_SIZE);
+	memcpy(this->buffer + PageFile::PAGE_SIZE - BTNonLeafNode::PAGE_ID_SIZE, &pid,
+	       BTNonLeafNode::PAGE_ID_SIZE);
+
+	// *(int *) (this->buffer + PageFile::PAGE_SIZE -
+	// 	  BTNonLeafNode::PAGE_ID_SIZE) = pid;
+	return 0;
 }
 
 void BTLeafNode::printBuffer() {
@@ -302,7 +318,7 @@ void BTLeafNode::printBuffer() {
 		buffInd += BTNonLeafNode::KEY_SIZE;
 		cout << " " << currKey;
 	}
-
+	cout << "/" << getNextNodePtr() << "/ ";
 	return;
 }
 
@@ -380,40 +396,51 @@ RC BTNonLeafNode::_insert(int key, PageId pid)
 		memcpy(this->buffer, &pid, BTNonLeafNode::PAGE_ID_SIZE);
 		memcpy(this->buffer + BTNonLeafNode::PAGE_ID_SIZE, &key, BTNonLeafNode::KEY_SIZE);
 		return 0;
-	}
-	else {
+	} else {
+		ind = BTNonLeafNode::PAGE_ID_SIZE;
+
 		// assumes buffer has been initialized to 0xff
 		while(currPid != -1) {
 			// Parse the pid first and increment the index
-			memcpy(&currPid, this->buffer + ind, BTNonLeafNode::PAGE_ID_SIZE);
+			memcpy(&currKey, this->buffer + ind,
+			       BTNonLeafNode::KEY_SIZE);
+			ind += BTNonLeafNode::KEY_SIZE;
+
+			memcpy(&currPid, this->buffer + ind,
+			       BTNonLeafNode::PAGE_ID_SIZE);
 			ind += BTNonLeafNode::PAGE_ID_SIZE;
 
 			// Parse the key next and increment the index
-			memcpy(&currKey, this->buffer + ind, BTNonLeafNode::KEY_SIZE);
-			ind += BTNonLeafNode::KEY_SIZE;
-
 			if (key < currKey) {
 				// Move the index back to be before this current key
 				ind -= (BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE);
 
 				// Move the memory block over by one pid and one key size
 				memmove(this->buffer + ind + BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE,
-					this->buffer + ind, PageFile::PAGE_SIZE - (ind + BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE));
+					this->buffer + ind,
+					PageFile::PAGE_SIZE - (ind + BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE));
 
 				// Copy PID and key into the buffer
-				memcpy(this->buffer + ind, &pid, BTNonLeafNode::PAGE_ID_SIZE);
-				ind += BTNonLeafNode::PAGE_ID_SIZE;
-				memcpy(this->buffer + ind, &key, BTNonLeafNode::KEY_SIZE);
+				memcpy(this->buffer + ind, &key,
+				       BTNonLeafNode::KEY_SIZE);
 				ind += BTNonLeafNode::KEY_SIZE;
+
+				memcpy(this->buffer + ind, &pid,
+				       BTNonLeafNode::PAGE_ID_SIZE);
+				ind += BTNonLeafNode::PAGE_ID_SIZE;
+
 				return 0;
 			} else if (currKey == -1) {
 				// Move the index back to be before this current key
-				ind -= BTNonLeafNode::KEY_SIZE;
+				// ind -= BTNonLeafNode::KEY_SIZE;
 
 				// Copy PID and key into the buffer
-				memcpy(this->buffer + ind, &key, BTNonLeafNode::KEY_SIZE);
+				memcpy(this->buffer + ind, &key,
+				       BTNonLeafNode::KEY_SIZE);
 				ind += BTNonLeafNode::KEY_SIZE;
-				memcpy(this->buffer + ind, &pid, BTNonLeafNode::PAGE_ID_SIZE);
+
+				memcpy(this->buffer + ind, &pid,
+				       BTNonLeafNode::PAGE_ID_SIZE);
 				ind += BTNonLeafNode::PAGE_ID_SIZE;
 				return 0;
 			}
@@ -453,38 +480,50 @@ RC BTNonLeafNode::insert(int key, PageId pid)
 		return 0;
 	}
 	else {
+		ind = BTNonLeafNode::PAGE_ID_SIZE;
+
 		// assumes buffer has been initialized to 0xff
 		while(currPid != -1) {
 			// Parse the pid first and increment the index
-			memcpy(&currPid, this->buffer + ind, BTNonLeafNode::PAGE_ID_SIZE);
+			memcpy(&currKey, this->buffer + ind,
+			       BTNonLeafNode::KEY_SIZE);
+			ind += BTNonLeafNode::KEY_SIZE;
+
+			memcpy(&currPid, this->buffer + ind,
+			       BTNonLeafNode::PAGE_ID_SIZE);
 			ind += BTNonLeafNode::PAGE_ID_SIZE;
 
 			// Parse the key next and increment the index
-			memcpy(&currKey, this->buffer + ind, BTNonLeafNode::KEY_SIZE);
-			ind += BTNonLeafNode::KEY_SIZE;
-
 			if (key < currKey) {
 				// Move the index back to be before this current key
 				ind -= (BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE);
 
 				// Move the memory block over by one pid and one key size
 				memmove(this->buffer + ind + BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE,
-					this->buffer + ind, PageFile::PAGE_SIZE - (ind + BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE));
+					this->buffer + ind,
+					PageFile::PAGE_SIZE - (ind + BTNonLeafNode::PAGE_ID_SIZE + BTNonLeafNode::KEY_SIZE));
 
 				// Copy PID and key into the buffer
-				memcpy(this->buffer + ind, &pid, BTNonLeafNode::PAGE_ID_SIZE);
-				ind += BTNonLeafNode::PAGE_ID_SIZE;
-				memcpy(this->buffer + ind, &key, BTNonLeafNode::KEY_SIZE);
+				memcpy(this->buffer + ind, &key,
+				       BTNonLeafNode::KEY_SIZE);
 				ind += BTNonLeafNode::KEY_SIZE;
+
+				memcpy(this->buffer + ind, &pid,
+				       BTNonLeafNode::PAGE_ID_SIZE);
+				ind += BTNonLeafNode::PAGE_ID_SIZE;
+
 				return 0;
 			} else if (currKey == -1) {
 				// Move the index back to be before this current key
-				ind -= BTNonLeafNode::KEY_SIZE;
+				// ind -= BTNonLeafNode::KEY_SIZE;
 
 				// Copy PID and key into the buffer
-				memcpy(this->buffer + ind, &key, BTNonLeafNode::KEY_SIZE);
+				memcpy(this->buffer + ind, &key,
+				       BTNonLeafNode::KEY_SIZE);
 				ind += BTNonLeafNode::KEY_SIZE;
-				memcpy(this->buffer + ind, &pid, BTNonLeafNode::PAGE_ID_SIZE);
+
+				memcpy(this->buffer + ind, &pid,
+				       BTNonLeafNode::PAGE_ID_SIZE);
 				ind += BTNonLeafNode::PAGE_ID_SIZE;
 				return 0;
 			}
