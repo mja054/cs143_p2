@@ -432,7 +432,8 @@ RC BTNonLeafNode::_insert(int key, PageId pid)
 				return 0;
 			} else if (currKey == -1) {
 				// Move the index back to be before this current key
-				// ind -= BTNonLeafNode::KEY_SIZE;
+				ind -= (BTNonLeafNode::KEY_SIZE +
+					BTNonLeafNode::PAGE_ID_SIZE);
 
 				// Copy PID and key into the buffer
 				memcpy(this->buffer + ind, &key,
@@ -515,7 +516,8 @@ RC BTNonLeafNode::insert(int key, PageId pid)
 				return 0;
 			} else if (currKey == -1) {
 				// Move the index back to be before this current key
-				// ind -= BTNonLeafNode::KEY_SIZE;
+				ind -= (BTNonLeafNode::KEY_SIZE +
+					BTNonLeafNode::PAGE_ID_SIZE);
 
 				// Copy PID and key into the buffer
 				memcpy(this->buffer + ind, &key,
