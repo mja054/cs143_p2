@@ -575,7 +575,7 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
 		memcpy(&sibling.buffer, this->buffer + newStart, origBufferSize - newStart);
 
 		// Clear everything in the buffer starting from the midKey
-		memset(this->buffer + ind + BTNonLeafNode::PAGE_ID_SIZE, 0xff, origBufferSize - ind);
+		memset(this->buffer + ind + BTNonLeafNode::PAGE_ID_SIZE, 0xff, origBufferSize - (ind + BTNonLeafNode::PAGE_ID_SIZE));
 	}
 	return 0; 
 }
