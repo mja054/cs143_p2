@@ -181,9 +181,51 @@ SqlEngine::print_tuples(BTreeIndex btIndex, int attr,
 					break;
 				}
 			} else {
-				// attr is type value
-				if (strcmp(value.c_str(), it->value)) {
-					goto nextIter;
+				int diff = strcmp(value.c_str(), it->value);
+
+				switch (it->comp) {
+				case SelCond::LT:
+					if (diff < 0) {
+						break;
+					} else {
+						goto nextIter;
+					}
+					break;
+				case SelCond::LE:
+					if (diff <= 0) {
+						break;
+					} else {
+						goto nextIter;
+					}
+					break;
+				case SelCond::GT:
+					if (diff > 0) {
+						break;
+					} else {
+						goto nextIter;
+					}
+					break;
+				case SelCond::GE:
+					if (diff >= 0) {
+						break;
+					} else {
+						goto nextIter;
+					}
+					break;
+				case SelCond::EQ:
+					if (diff == 0) {
+						break;
+					} else {
+						goto nextIter;
+					}
+					break;
+				case SelCond::NE:
+					if (diff !=0 ) {
+						break;
+					} else {
+						goto nextIter;
+					}
+					break;
 				}
 			}
 		}
